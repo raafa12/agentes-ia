@@ -1,0 +1,26 @@
+{
+  "name": "agentes-ia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Equipo de 3 agentes de IA (Orquestador, Develop, Testing) que trabajan juntos sobre una web de ejemplo",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "next": "15.5.29",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.7.0"
+  }
+}
