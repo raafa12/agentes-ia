@@ -92,7 +92,7 @@ export default function RunView({ initial }: { initial: RunState }) {
       {/* Los tres agentes y qué hace cada uno ahora mismo */}
       <section className="agents" aria-label="Agentes">
         {AGENTS.map((a, i) => {
-          const st = run.agents[a.key];
+          const st = run.agents?.[a.key] ?? { status: "idle" as const, note: "—" };
           return (
             <div key={a.key} className="agent-slot">
               <article className={`agent a-${a.key} s-${st.status}`}>

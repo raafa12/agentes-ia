@@ -23,6 +23,18 @@ const MAX_ERRORS = 3;
 
 // ───────────── lectura ─────────────
 
+// Por si algún valor JSON llega como texto (filas antiguas o un driver que no lo decodifica)
+function json<T>(v: unknown, fallback: T): T {
+  if (typeof v === "string") {
+    try {
+      return JSON.parse(v) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  return (v ?? fallback) as T;
+}
+
 function toRun(r: Record<string, unknown>): Run {
   return {
     id: r.id as string,
@@ -30,7 +42,7 @@ function toRun(r: Record<string, unknown>): Run {
     status: r.status as Run["status"],
     summary: (r.summary as string) ?? null,
     provider: r.provider as string,
-    agents: r.agents as Run["agents"],
+    agents: json<Run["agents"]>(r.agents, {} as Run["agents"]),
     created_at: new Date(r.created_at as string).toISOString(),
     updated_at: new Date(r.updated_at as string).toISOString(),
   };
@@ -43,10 +55,10 @@ function toTask(r: Record<string, unknown>): Task {
     idx: Number(r.idx),
     title: r.title as string,
     description: r.description as string,
-    acceptance: r.acceptance as string[],
+    acceptance: json<string[]>(r.acceptance, []),
     status: r.status as Task["status"],
     attempts: Number(r.attempts),
-    feedback: (r.feedback as string[]) ?? [],
+    feedback: json<string[]>(r.feedback, []),
   };
 }
 
@@ -263,7 +275,7 @@ async function advance(id: string) {
   if (current.status === "testing") {
     await setAgents(id, { testing: { status: "working", note: `Comprobando tarea ${n}: ${current.title}` } });
     const [row] = await q<{ touched: string[] }>("select touched from tasks where id = $1", [current.id]);
-    const result = await testTask(current, files, row?.touched ?? []);
+    const result = await testTask(current, files, json<string[]>(row?.touched, []));
     const detail = result.checks.map((c) => `${c.passed ? "✓" : "✗"} ${c.name}${!c.passed && c.detail ? ` — ${c.detail}` : ""}`).join("\n");
     if (result.passed) {
       await setTask(current.id, { status: "passed", feedback: [] });

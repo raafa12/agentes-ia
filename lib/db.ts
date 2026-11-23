@@ -60,7 +60,19 @@ async function connect(): Promise<QueryFn> {
   let query: QueryFn;
   if (url) {
     const postgres = (await import("postgres")).default;
-    const sql = postgres(url, { ssl: "require", max: 1, prepare: false, idle_timeout: 20 });
+    const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+    // Los parámetros JSON ya van como texto (JSON.stringify): que postgres.js no los vuelva a codificar
+    const asText = (x: unknown) => (typeof x === "string" ? x : JSON.stringify(x));
+    const sql = postgres(url, {
+      ssl: local ? false : "require",
+      max: 1,
+      prepare: false,
+      idle_timeout: 20,
+      types: {
+        jsonbText: { to: 3802, from: [], serialize: asText, parse: (x: string) => x },
+        jsonText: { to: 114, from: [], serialize: asText, parse: (x: string) => x },
+      },
+    });
     query = async (text, params = []) => (await sql.unsafe(text, params as never[])) as never;
     await sql.unsafe(SCHEMA);
   } else {
