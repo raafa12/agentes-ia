@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { createRun, listRuns } from "@/lib/engine";
 import { q } from "@/lib/db";
+import { guardApi } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const denied = await guardApi();
+  if (denied) return denied;
   return NextResponse.json({ runs: await listRuns() });
 }
 
 export async function POST(req: Request) {
+  const denied = await guardApi();
+  if (denied) return denied;
   const { request } = await req.json().catch(() => ({}));
   const text = typeof request === "string" ? request.trim() : "";
   if (text.length < 8 || text.length > 500) {

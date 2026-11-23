@@ -2,10 +2,12 @@ import Link from "next/link";
 import { listRuns } from "@/lib/engine";
 import { RUN_STATUS } from "@/lib/labels";
 import NewRunForm from "@/components/NewRunForm";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  await requireUser();
   const runs = await listRuns();
   return (
     <>

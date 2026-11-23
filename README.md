@@ -38,7 +38,7 @@ Navegador ──POST /api/runs──────────▶ crea la ejecuci�
 | `lib/llm.ts` | Cliente mínimo de OpenRouter, Gemini y Groq (sin SDK), salida JSON y reintentos ante límites de uso |
 | `lib/db.ts` | Postgres: `postgres.js` con `DATABASE_URL`; PGlite (Postgres en WebAssembly) en local si no hay `DATABASE_URL` |
 | `components/RunView.tsx` | Pantalla de la ejecución: agentes, tareas, registro y vista previa |
-| `middleware.ts`, `lib/auth.ts` | Login con el usuario de prueba (cookie firmada con HMAC) |
+| `lib/auth.ts`, `lib/session.ts` | Login con el usuario de prueba (cookie firmada con HMAC), comprobado en cada página y ruta de la API |
 
 ## Ejecutar en local
 
