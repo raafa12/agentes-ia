@@ -1,26 +1,31 @@
 // Cliente de IA mínimo, sin SDKs, con proveedores gratuitos.
 // - Google Gemini (recomendado, plan gratuito de AI Studio): GEMINI_API_KEY
 // - Groq (gpt-oss-120b, plan gratuito): GROQ_API_KEY
+// - OpenRouter (modelos gratuitos ":free" o el enrutador "openrouter/free"): OPENROUTER_API_KEY
 // - "mock": sin clave; los agentes usan reglas simples para poder probar la app sin coste.
 
-export type Provider = "groq" | "gemini" | "mock";
+export type Provider = "groq" | "gemini" | "openrouter" | "mock";
 
 export function provider(): Provider {
   const forced = process.env.LLM_PROVIDER as Provider | undefined;
-  if (forced === "groq" || forced === "gemini" || forced === "mock") return forced;
+  if (forced === "groq" || forced === "gemini" || forced === "openrouter" || forced === "mock") return forced;
   if (process.env.GEMINI_API_KEY) return "gemini";
   if (process.env.GROQ_API_KEY) return "groq";
+  if (process.env.OPENROUTER_API_KEY) return "openrouter";
   return "mock";
 }
 
 export function providerLabel(p: Provider = provider()): string {
   if (p === "groq") return `Groq · ${groqModel()}`;
   if (p === "gemini") return `Gemini · ${geminiModel()}`;
+  if (p === "openrouter") return `OpenRouter · ${openrouterModel()}`;
   return "Modo simulado (sin IA)";
 }
 
 const groqModel = () => process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 const geminiModel = () => process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+// "openrouter/free" elige en cada llamada un modelo gratuito disponible que admita lo que se le pide
+const openrouterModel = () => process.env.OPENROUTER_MODEL || "openrouter/free";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -56,6 +61,31 @@ async function callGroq(system: string, user: string): Promise<string> {
   });
   if (!res.ok) throw new HttpError(res.status, await res.text(), res.headers.get("retry-after"));
   const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+async function callOpenRouter(system: string, user: string): Promise<string> {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "X-Title": "Equipo de agentes",
+    },
+    body: JSON.stringify({
+      model: openrouterModel(),
+      temperature: 0.2,
+      max_tokens: 12000,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+  if (!res.ok) throw new HttpError(res.status, await res.text(), res.headers.get("retry-after"));
+  const data = await res.json();
+  if (data.error) throw new HttpError(Number(data.error.code) || 502, JSON.stringify(data.error));
   return data.choices?.[0]?.message?.content ?? "";
 }
 
@@ -96,7 +126,8 @@ export async function askJson<T>(system: string, user: string): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const text = p === "groq" ? await callGroq(system, user) : await callGemini(system, user);
+      const text =
+        p === "groq" ? await callGroq(system, user) : p === "openrouter" ? await callOpenRouter(system, user) : await callGemini(system, user);
       return parseJson<T>(text);
     } catch (e) {
       lastErr = e;
